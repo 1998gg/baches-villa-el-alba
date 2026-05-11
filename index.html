@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Villa El Alba | Mapa Satelital de Pasajes</title>
+    <meta name="description" content="Mapa satelital de los pasajes de Villa El Alba con filtros por zona, buscador de direcciones y galerias de imagenes por direccion.">
+    <meta name="theme-color" content="#14324a">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        :root {
+            --bg: #f4efe6;
+            --bg-soft: #fbf8f2;
+            --panel: rgba(255, 251, 245, 0.86);
+            --panel-strong: #fffdf8;
+            --ink: #173042;
+            --muted: #5a6974;
+            --line: rgba(23, 48, 66, 0.12);
+            --shadow: 0 18px 38px rgba(23, 48, 66, 0.12);
+            --north: #1f6db4;
+            --center: #15906d;
+            --south: #d1593e;
+            --accent: #f2b766;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: "Manrope", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(242, 183, 102, 0.24), transparent 34%),
+                radial-gradient(circle at top right, rgba(21, 144, 109, 0.16), transparent 30%),
+                linear-gradient(180deg, #efe8db 0%, #f7f3ec 45%, #f3ede4 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(23, 48, 66, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(23, 48, 66, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 85%);
+        }
+
+        .page-shell {
+            position: relative;
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 26px;
+            background: var(--panel);
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.9fr);
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .hero-copy,
+        .hero-stats,
+        .controls,
+        .map-panel,
+        .list-panel,
+        .footer-note {
+            padding: 24px;
+        }
+
+        .hero-copy {
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background:
+                linear-gradient(135deg, rgba(20, 50, 74, 0.95), rgba(25, 92, 120, 0.88)),
+                linear-gradient(180deg, rgba(242, 183, 102, 0.22), transparent);
+            color: #f9f6ef;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hero-copy::after {
+            content: "";
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            right: -20px;
+            top: -20px;
+            border-radius: 50%;
+            background: rgba(242, 183, 102, 0.28);
+            filter: blur(6px);
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            width: fit-content;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            max-width: 12ch;
+            margin-top: 14px;
+            font-size: clamp(2.2rem, 4vw, 4rem);
+            line-height: 0.98;
+            letter-spacing: -0.04em;
+        }
+
+        .hero-stats {
+            display: grid;
+            gap: 14px;
+            background: linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(255, 249, 241, 0.82));
+            align-content: start;
+        }
+
+        .hero-stats h2 {
+            font-size: 0.98rem;
+            color: var(--muted);
+            margin-bottom: 2px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .stat-card {
+            padding: 18px;
+            border-radius: 20px;
+            background: var(--panel-strong);
+            border: 1px solid rgba(23, 48, 66, 0.08);
+        }
+
+        .stat-card strong {
+            display: block;
+            font-size: 1.9rem;
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+
+        .stat-card span {
+            display: block;
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(23, 48, 66, 0.14);
+            background: rgba(255, 255, 255, 0.78);
+            color: var(--ink);
+            font: inherit;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .search-input:focus,
+        .zone-filter:focus,
+        .reset-button:focus,
+        .list-card:focus,
+        .popup-link:focus {
+            outline: 3px solid rgba(31, 109, 180, 0.16);
+            outline-offset: 2px;
+        }
+
+        .zone-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .zone-filter,
+        .reset-button {
+            border: 1px solid rgba(23, 48, 66, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.84);
+            color: var(--ink);
+            cursor: pointer;
+            font: inherit;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .zone-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            font-weight: 700;
+        }
+
+        .zone-filter span {
+            display: inline-flex;
+            min-width: 28px;
+            justify-content: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(23, 48, 66, 0.06);
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .zone-filter.active {
+            background: var(--ink);
+            color: #fffdf8;
+            border-color: transparent;
+            transform: translateY(-1px);
+        }
+
+        .zone-filter.active span {
+            background: rgba(255, 255, 255, 0.14);
+            color: #fffdf8;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.75fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .map-panel,
+        .list-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .map-panel {
+            min-height: 0;
+            position: sticky;
+            top: 24px;
+        }
+
+        .list-panel {
+            min-height: 0;
+            max-height: calc(100vh - 48px);
+            overflow: hidden;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .panel-head h2 {
+            font-size: 1.3rem;
+            letter-spacing: -0.03em;
+        }
+
+        .panel-head p {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            justify-content: flex-end;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .legend-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        #map {
+            width: 100%;
+            height: clamp(360px, 50vh, 500px);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(23, 48, 66, 0.12);
+            background: #dfe7ea;
+        }
+
+        .map-hint {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        .reset-button {
+            padding: 11px 16px;
+            font-weight: 700;
+        }
+
+        .reset-button:hover,
+        .zone-filter:hover,
+        .list-card:hover,
+        .popup-link:hover {
+            transform: translateY(-1px);
+        }
+
+        .results-list {
+            display: grid;
+            flex: 1;
+            min-height: 0;
+            gap: 12px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .list-card {
+            width: 100%;
+            text-align: left;
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(23, 48, 66, 0.1);
+            background: rgba(255, 255, 255, 0.72);
+            color: inherit;
+            cursor: pointer;
+            font: inherit;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .list-card.active {
+            border-color: rgba(23, 48, 66, 0.26);
+            background: rgba(255, 255, 255, 0.94);
+        }
+
+        .list-card-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .list-card h3 {
+            font-size: 1rem;
+            line-height: 1.3;
+            letter-spacing: -0.02em;
+        }
+
+        .list-card p {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .zone-pill {
+            padding: 7px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #fffdf8;
+        }
+
+        .meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        .meta-chip {
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(23, 48, 66, 0.06);
+        }
+
+        .empty-state {
+            padding: 22px;
+            border-radius: 22px;
+            border: 1px dashed rgba(23, 48, 66, 0.18);
+            background: rgba(255, 255, 255, 0.46);
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .footer-note {
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .leaflet-control-layers,
+        .leaflet-bar {
+            border: 1px solid rgba(23, 48, 66, 0.12) !important;
+            box-shadow: 0 10px 25px rgba(23, 48, 66, 0.12) !important;
+            border-radius: 16px !important;
+            overflow: hidden;
+        }
+
+        .leaflet-control-layers {
+            background: rgba(255, 255, 255, 0.94) !important;
+            font-family: inherit;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 22px;
+            padding: 4px;
+            box-shadow: 0 18px 40px rgba(23, 48, 66, 0.18);
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            width: min(320px, 72vw) !important;
+            font-family: inherit;
+        }
+
+        .popup-card {
+            padding: 16px;
+        }
+
+        .popup-card .zone-pill {
+            display: inline-flex;
+            margin-bottom: 12px;
+        }
+
+        .popup-card h3 {
+            font-size: 1.1rem;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+        }
+
+        .popup-card p {
+            margin-top: 8px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .popup-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .popup-grid a {
+            display: block;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            border-radius: 14px;
+            background: rgba(23, 48, 66, 0.08);
+        }
+
+        .popup-grid img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .popup-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .popup-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 999px;
+            color: #fffdf8;
+            background: var(--ink);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 700;
+            transition: transform 0.18s ease, opacity 0.18s ease;
+        }
+
+        .popup-link.secondary {
+            color: var(--ink);
+            background: rgba(23, 48, 66, 0.08);
+        }
+
+        .zone-label {
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(23, 48, 66, 0.12);
+            color: var(--ink);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-family: inherit;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            box-shadow: none;
+        }
+
+        @media (max-width: 1120px) {
+            .hero,
+            .controls,
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .map-panel,
+            .list-panel {
+                min-height: initial;
+                max-height: none;
+                position: static;
+                overflow: visible;
+            }
+
+            .legend {
+                justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page-shell {
+                padding: 16px;
+            }
+
+            .hero-copy,
+            .hero-stats,
+            .controls,
+            .map-panel,
+            .list-panel,
+            .footer-note {
+                padding: 18px;
+            }
+
+            #map {
+                height: clamp(320px, 46vh, 400px);
+            }
+
+            .panel-head {
+                flex-direction: column;
+            }
+
+            .stat-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero">
+            <section class="hero-copy panel">
+                <span class="eyebrow">Mapa Satelital</span>
+                <h1>Pasajes Villa El Alba</h1>
+            </section>
+
+            <aside class="hero-stats panel">
+                <h2>Resumen general</h2>
+                <div class="stat-grid">
+                    <article class="stat-card">
+                        <strong id="stat-direcciones">0</strong>
+                        <span>Direcciones unicas</span>
+                    </article>
+                    <article class="stat-card">
+                        <strong id="stat-fotos">0</strong>
+                        <span>Fotos registradas</span>
+                    </article>
+                    <article class="stat-card">
+                        <strong id="stat-norte">0</strong>
+                        <span>Sector norte</span>
+                    </article>
+                    <article class="stat-card">
+                        <strong id="stat-centro-sur">0</strong>
+                        <span>Centro y sur</span>
+                    </article>
+                </div>
+            </aside>
+        </header>
+
+        <section class="controls panel">
+            <div>
+                <label class="field-label" for="searchInput">Buscar direccion</label>
+                <input id="searchInput" class="search-input" type="search" placeholder="Ejemplo: Rio Baker 5147 o Laguna San Rafael">
+            </div>
+
+            <div>
+                <span class="field-label">Filtrar por zona</span>
+                <div class="zone-filters" id="zoneFilters">
+                    <button type="button" class="zone-filter active" data-zone="Todos">Todos <span id="count-todos">0</span></button>
+                    <button type="button" class="zone-filter" data-zone="Norte">Norte <span id="count-norte">0</span></button>
+                    <button type="button" class="zone-filter" data-zone="Centro">Centro <span id="count-centro">0</span></button>
+                    <button type="button" class="zone-filter" data-zone="Sur">Sur <span id="count-sur">0</span></button>
+                </div>
+            </div>
+        </section>
+
+        <main class="layout">
+            <section class="map-panel panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Mapa interactivo</h2>
+                        <p id="resultsLabel">Preparando direcciones...</p>
+                    </div>
+                    <div class="legend">
+                        <span class="legend-item"><span class="legend-swatch" style="background: var(--north);"></span>Norte</span>
+                        <span class="legend-item"><span class="legend-swatch" style="background: var(--center);"></span>Centro</span>
+                        <span class="legend-item"><span class="legend-swatch" style="background: var(--south);"></span>Sur</span>
+                    </div>
+                </div>
+                <div id="map"></div>
+                <p class="map-hint">Los puntos superpuestos se separan visualmente unos metros para facilitar el clic, pero el enlace de mapas conserva la coordenada original.</p>
+            </section>
+
+            <aside class="list-panel panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Direcciones</h2>
+                        <p>Selecciona una tarjeta para centrar el mapa y abrir su galeria.</p>
+                    </div>
+                    <button type="button" class="reset-button" id="resetView">Ver todo</button>
+                </div>
+                <div class="results-list" id="resultsList"></div>
+            </aside>
+        </main>
+
+        <footer class="footer-note panel">
+            Base satelital con alternativa callejero, listado lateral y filtros preparados para publicacion estatica. El siguiente paso natural es optimizar el peso de las imagenes antes de subir el sitio.
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const zoneStyles = {
+            Norte: { color: "#1f6db4", soft: "rgba(31, 109, 180, 0.12)" },
+            Centro: { color: "#15906d", soft: "rgba(21, 144, 109, 0.12)" },
+            Sur: { color: "#d1593e", soft: "rgba(209, 89, 62, 0.12)" }
+        };
+
+        const zoneOrder = { Norte: 0, Centro: 1, Sur: 2 };
+        const initialBounds = L.latLngBounds([[-33.5470, -70.5660], [-33.5530, -70.5550]]);
+        const zoneBounds = {
+            Norte: L.latLngBounds([[-33.5470, -70.5660], [-33.5493, -70.5550]]),
+            Centro: L.latLngBounds([[-33.5493, -70.5660], [-33.5505, -70.5550]]),
+            Sur: L.latLngBounds([[-33.5505, -70.5660], [-33.5530, -70.5550]])
+        };
+
+        const rawPasajes = [
+            {lat: -33.5520, lng: -70.5611, nombre: "Lago Chacabuco 4627", ubicacion: "Sur", imagen: "Lago Chacabuco Sur.jpg"},
+            {lat: -33.5520, lng: -70.5611, nombre: "Lago Chacabuco 4615", ubicacion: "Sur", imagen: "Lago Chacabuco Sur2.jpg"},
+            {lat: -33.5520, lng: -70.5611, nombre: "Lago Chacabuco 4591", ubicacion: "Sur", imagen: "Lago Chacabuco Sur3.jpg"},
+            {lat: -33.5520, lng: -70.5611, nombre: "Lago Chacabuco 4549", ubicacion: "Sur", imagen: "Lago Chacabuco Sur4.jpg"},
+            {lat: -33.5520, lng: -70.5611, nombre: "Lago Chacabuco 4519", ubicacion: "Sur", imagen: "Lago Chacabuco Sur5.jpg"},
+            {lat: -33.5517, lng: -70.5614, nombre: "Lago General Carrera 4888", ubicacion: "Sur", imagen: "Lago General Carrera Sur.jpeg"},
+            {lat: -33.5517, lng: -70.5614, nombre: "Lago General Carrera 4887", ubicacion: "Sur", imagen: "Lago General Carrera Sur2.jpeg"},
+            {lat: -33.5517, lng: -70.5614, nombre: "Lago General Carrera 4887", ubicacion: "Sur", imagen: "Lago General Carrera Sur3.jpeg"},
+            {lat: -33.5517, lng: -70.5614, nombre: "Lago General Carrera 4876", ubicacion: "Sur", imagen: "Lago General Carrera Sur4.jpeg"},
+            {lat: -33.5517, lng: -70.5614, nombre: "Lago General Carrera 4876", ubicacion: "Sur", imagen: "Lago General Carrera Sur5.jpeg"},
+            {lat: -33.5515, lng: -70.5618, nombre: "Laguna San Rafael 5237", ubicacion: "Centro", imagen: "Laguna San Rafael.png"},
+            {lat: -33.5515, lng: -70.5618, nombre: "Laguna San Rafael 5237", ubicacion: "Centro", imagen: "Laguna San Rafael2.png"},
+            {lat: -33.5515, lng: -70.5618, nombre: "Laguna San Rafael 5237", ubicacion: "Centro", imagen: "Laguna San Rafael3.png"},
+            {lat: -33.5515, lng: -70.5618, nombre: "Laguna San Rafael 5225", ubicacion: "Centro", imagen: "Laguna San Rafael4.png"},
+            {lat: -33.5515, lng: -70.5618, nombre: "Laguna San Rafael 5225", ubicacion: "Centro", imagen: "Laguna San Rafael5.png"},
+            {lat: -33.5500, lng: -70.5612, nombre: "RÃ­o Baker 5147", ubicacion: "Norte", imagen: "RÃ­o Baker Norte.jpg"},
+            {lat: -33.5500, lng: -70.5612, nombre: "RÃ­o Baker 5309", ubicacion: "Norte", imagen: "RÃ­o Baker Norte2.jpg"},
+            {lat: -33.5500, lng: -70.5612, nombre: "RÃ­o Baker 5147", ubicacion: "Norte", imagen: "RÃ­o Baker Norte3.jpg"},
+            {lat: -33.5500, lng: -70.5612, nombre: "RÃ­o Baker 5309", ubicacion: "Norte", imagen: "RÃ­o Baker Norte4.jpg"},
+            {lat: -33.5500, lng: -70.5612, nombre: "RÃ­o Baker 5147", ubicacion: "Norte", imagen: "RÃ­o Baker Norte5.jpg"},
+            {lat: -33.548879, lng: -70.563222, nombre: "RÃ­o Chol Chol 5141", ubicacion: "Norte", imagen: "RÃ­o Chol Chol Norte.jpg"},
+            {lat: -33.548879, lng: -70.563222, nombre: "RÃ­o Chol Chol 5189", ubicacion: "Norte", imagen: "RÃ­o Chol Chol Norte2.jpg"},
+            {lat: -33.5497, lng: -70.5610, nombre: "RÃ­o Chol Chol 5189", ubicacion: "Norte", imagen: "RÃ­o Chol Chol Norte3.jpg"},
+            {lat: -33.5497, lng: -70.5610, nombre: "RÃ­o Chol Chol 5057", ubicacion: "Norte", imagen: "RÃ­o Chol Chol Norte4.jpg"},
+            {lat: -33.5497, lng: -70.5610, nombre: "RÃ­o Chol Chol 5057", ubicacion: "Norte", imagen: "RÃ­o Chol Chol Norte5.jpg"},
+            {lat: -33.551389, lng: -70.557426, nombre: "RÃ­o Cisnes 4590", ubicacion: "Sur", imagen: "RÃ­o Cisnes Sur.jpg"},
+            {lat: -33.551229, lng: -70.557479, nombre: "RÃ­o Cisnes 4600", ubicacion: "Sur", imagen: "RÃ­o Cisnes Sur2.jpg"},
+            {lat: -33.550827, lng: -70.557570, nombre: "RÃ­o Cisnes 4650", ubicacion: "Sur", imagen: "RÃ­o Cisnes Sur3.jpg"},
+            {lat: -33.550827, lng: -70.557570, nombre: "RÃ­o Cisnes 4650", ubicacion: "Sur", imagen: "RÃ­o Cisnes Sur4.jpg"},
+            {lat: -33.550827, lng: -70.557570, nombre: "RÃ­o Cisnes 4650", ubicacion: "Sur", imagen: "RÃ­o Cisnes Sur5.jpg"},
+            {lat: -33.550010, lng: -70.559639, nombre: "RÃ­o Colegual 4793", ubicacion: "Centro", imagen: "RÃ­o Colegual Centro.jpg"},
+            {lat: -33.550143, lng: -70.559867, nombre: "RÃ­o Colegual 4792", ubicacion: "Centro", imagen: "RÃ­o Colegual Centro2.jpg"},
+            {lat: -33.550093, lng: -70.559591, nombre: "RÃ­o Colegual 4783", ubicacion: "Centro", imagen: "RÃ­o Colegual Centro3.jpg"},
+            {lat: -33.549544, lng: -70.560338, nombre: "RÃ­o Colegual 4872", ubicacion: "Centro", imagen: "RÃ­o Colegual Centro4.jpg"},
+            {lat: -33.549544, lng: -70.560338, nombre: "RÃ­o Colegual 4872", ubicacion: "Centro", imagen: "RÃ­o Colegual Centro5.jpg"},
+            {lat: -33.548511, lng: -70.559192, nombre: "RÃ­o FrÃ­o 4905", ubicacion: "Norte", imagen: "Rio Frio Norte .jpeg"},
+            {lat: -33.548511, lng: -70.559192, nombre: "RÃ­o FrÃ­o 4905", ubicacion: "Norte", imagen: "Rio Frio Norte 2.jpeg"},
+            {lat: -33.548331, lng: -70.559394, nombre: "RÃ­o FrÃ­o 4935", ubicacion: "Norte", imagen: "Rio Frio Norte 3.jpeg"},
+            {lat: -33.548331, lng: -70.559394, nombre: "RÃ­o FrÃ­o 4935", ubicacion: "Norte", imagen: "Rio Frio Norte 4.jpeg"},
+            {lat: -33.548122, lng: -70.559812, nombre: "RÃ­o FrÃ­o 4974", ubicacion: "Norte", imagen: "Rio Frio Norte 5.jpeg"},
+            {lat: -33.548122, lng: -70.559812, nombre: "RÃ­o FrÃ­o 4974", ubicacion: "Norte", imagen: "Rio Frio Norte 6.jpeg"},
+            {lat: -33.548084, lng: -70.559875, nombre: "RÃ­o FrÃ­o 4984", ubicacion: "Norte", imagen: "Rio Frio Norte 7.jpeg"},
+            {lat: -33.548084, lng: -70.559875, nombre: "RÃ­o FrÃ­o 4984", ubicacion: "Norte", imagen: "Rio Frio Norte 8.jpeg"},
+            {lat: -33.548084, lng: -70.559875, nombre: "RÃ­o FrÃ­o 4984", ubicacion: "Norte", imagen: "Rio Frio Norte 9.jpeg"},
+            {lat: -33.548084, lng: -70.559875, nombre: "RÃ­o FrÃ­o 4984", ubicacion: "Norte", imagen: "Rio Frio Norte 10.jpeg"},
+            {lat: -33.549852, lng: -70.565182, nombre: "RÃ­o Grey 5091", ubicacion: "Centro", imagen: "RÃ­o Grey Centro.jpeg"},
+            {lat: -33.550042, lng: -70.565138, nombre: "RÃ­o Grey 5081", ubicacion: "Centro", imagen: "RÃ­o Grey Centro2.JPG"},
+            {lat: -33.550105, lng: -70.565085, nombre: "RÃ­o Grey 5071", ubicacion: "Centro", imagen: "RÃ­o Grey Centro3.JPG"},
+            {lat: -33.550613, lng: -70.564646, nombre: "RÃ­o Grey 5001", ubicacion: "Centro", imagen: "RÃ­o Grey Centro4.jpeg"},
+            {lat: -33.550293, lng: -70.565225, nombre: "RÃ­o Grey 5072", ubicacion: "Centro", imagen: "RÃ­o Grey Centro5.jpg"},
+            {lat: -33.551891, lng: -70.563848, nombre: "RÃ­o Grey 4860", ubicacion: "Sur", imagen: "RÃ­o Grey Sur.jpg"},
+            {lat: -33.551743, lng: -70.563557, nombre: "RÃ­o Grey 4839", ubicacion: "Sur", imagen: "RÃ­o Grey Sur2.jpg"},
+            {lat: -33.551859, lng: -70.563874, nombre: "RÃ­o Grey 4836", ubicacion: "Sur", imagen: "RÃ­o Grey Sur3.jpg"},
+            {lat: -33.552091, lng: -70.563424, nombre: "RÃ­o Grey 4799", ubicacion: "Sur", imagen: "RÃ­o Grey Sur4.jpg"},
+            {lat: -33.552176, lng: -70.563261, nombre: "RÃ­o Grey 4779", ubicacion: "Sur", imagen: "RÃ­o Grey Sur5.jpg"},
+            {lat: -33.551877, lng: -70.563602, nombre: "RÃ­o Grey 4829", ubicacion: "Sur", imagen: "RÃ­o Grey Sur6.jpg"},
+            {lat: -33.551488, lng: -70.564182, nombre: "RÃ­o Grey 4920", ubicacion: "Sur", imagen: "RÃ­o Grey Sur7.jpg"},
+            {lat: -33.551294, lng: -70.564026, nombre: "RÃ­o Grey 4909", ubicacion: "Sur", imagen: "RÃ­o Grey Sur8.jpg"},
+            {lat: -33.551771, lng: -70.563916, nombre: "RÃ­o Grey 4872", ubicacion: "Sur", imagen: "RÃ­o Grey Sur9.jpg"},
+            {lat: -33.552318, lng: -70.563469, nombre: "RÃ­o Grey 4776", ubicacion: "Sur", imagen: "RÃ­o Grey Sur10.jpg"},
+            {lat: -33.548017, lng: -70.557068, nombre: "RÃ­o Huemules 4926", ubicacion: "Norte", imagen: "RÃ­o Huemules Norte.JPG"},
+            {lat: -33.547990, lng: -70.557124, nombre: "RÃ­o Huemules 4938", ubicacion: "Norte", imagen: "RÃ­o Huemules Norte2.JPG"},
+            {lat: -33.548573, lng: -70.556868, nombre: "RÃ­o Huemules 4873", ubicacion: "Norte", imagen: "RÃ­o Huemules Norte3.JPG"},
+            {lat: -33.549169, lng: -70.557085, nombre: "RÃ­o Huemules 4806", ubicacion: "Norte", imagen: "RÃ­o Huemules Norte4.JPG"},
+            {lat: -33.547729, lng: -70.556942, nombre: "RÃ­o Huemules 4795", ubicacion: "Norte", imagen: "RÃ­o Huemules Norte.JPG"},
+            {lat: -33.551373, lng: -70.556924, nombre: "RÃ­o Huemules 4571", ubicacion: "Sur", imagen: "Rio Huemules Sur.jpg"},
+            {lat: -33.551754, lng: -70.556890, nombre: "RÃ­o Huemules 4531", ubicacion: "Sur", imagen: "Rio Huemules Sur2.jpg"},
+            {lat: -33.551608, lng: -70.556880, nombre: "RÃ­o Huemules 4541", ubicacion: "Sur", imagen: "Rio Huemules Sur3.jpg"},
+            {lat: -33.551210, lng: -70.556928, nombre: "RÃ­o Huemules 4593", ubicacion: "Sur", imagen: "Rio Huemules Sur4.jpg"},
+            {lat: -33.551053, lng: -70.556951, nombre: "RÃ­o Huemules 4613", ubicacion: "Sur", imagen: "Rio Huemules Sur5.jpg"},
+            {lat: -33.549001, lng: -70.558245, nombre: "RÃ­o Manso 4805", ubicacion: "Norte", imagen: "RÃ­o Manso Norte.jpeg"},
+            {lat: -33.549001, lng: -70.558245, nombre: "RÃ­o Manso 4805", ubicacion: "Norte", imagen: "RÃ­o Manso Norte2.jpeg"},
+            {lat: -33.547952, lng: -70.559042, nombre: "RÃ­o Manso 4945", ubicacion: "Norte", imagen: "RÃ­o Manso Norte3.jpeg"},
+            {lat: -33.547952, lng: -70.559042, nombre: "RÃ­o Manso 4945", ubicacion: "Norte", imagen: "RÃ­o Manso Norte4.jpeg"},
+            {lat: -33.547952, lng: -70.559042, nombre: "RÃ­o Manso 4945", ubicacion: "Norte", imagen: "RÃ­o Manso Norte5.jpeg"},
+            {lat: -33.549894, lng: -70.563513, nombre: "RÃ­o MaÃ±ihuales 5013", ubicacion: "Centro", imagen: "RÃ­o MaÃ±ihuales Centro.jpg"},
+            {lat: -33.549929, lng: -70.563773, nombre: "RÃ­o MaÃ±ihuales 5012", ubicacion: "Centro", imagen: "RÃ­o MaÃ±ihuales Centro2.jpg"},
+            {lat: -33.549254, lng: -70.563984, nombre: "RÃ­o MaÃ±ihuales 5109", ubicacion: "Centro", imagen: "RÃ­o MaÃ±ihuales Centro3.jpg"},
+            {lat: -33.549374, lng: -70.564247, nombre: "RÃ­o MaÃ±ihuales 5108", ubicacion: "Centro", imagen: "RÃ­o MaÃ±ihuales Centro4.jpg"},
+            {lat: -33.549374, lng: -70.564247, nombre: "RÃ­o MaÃ±ihuales 5108", ubicacion: "Centro", imagen: "RÃ­o MaÃ±ihuales Centro.jpg"},
+            {lat: -33.551130, lng: -70.562781, nombre: "RÃ­o MaÃ±ihuales 4854", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4824", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur2.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4803", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur3.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4764", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur4.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4744", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur5.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4734", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur6.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4733", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur7.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4843", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur8.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4863", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur9.jpg"},
+            {lat: -33.5525, lng: -70.5632, nombre: "RÃ­o MaÃ±ihuales 4884", ubicacion: "Sur", imagen: "Rio MaÃ±ihuales Sur.jpg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4709", ubicacion: "Sur", imagen: "Rio Nilahue Sur.jpeg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4655", ubicacion: "Sur", imagen: "Rio Nilahue Sur2.jpeg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4658", ubicacion: "Sur", imagen: "Rio Nilahue Sur3.jpeg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4665", ubicacion: "Sur", imagen: "Rio Nilahue Sur4.jpeg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4714", ubicacion: "Sur", imagen: "Rio Nilahue Sur5.jpeg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4704", ubicacion: "Sur", imagen: "Rio Nilahue Sur6.jpg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4727", ubicacion: "Sur", imagen: "Rio Nilahue Sur 7.jpg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4668", ubicacion: "Sur", imagen: "Rio Nilahue Sur8.jpg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4724", ubicacion: "Sur", imagen: "Rio Nilahue Sur9.jpg"},
+            {lat: -33.5527, lng: -70.5621, nombre: "RÃ­o Nilahue 4648", ubicacion: "Sur", imagen: "Rio Nilahue Sur10.jpg"},
+            {lat: -33.5487, lng: -70.5625, nombre: "RÃ­o Petrohue 5165", ubicacion: "Norte", imagen: "RÃ­o PetrohuÃ© Norte.jpg"},
+            {lat: -33.5487, lng: -70.5625, nombre: "RÃ­o Petrohue 5118", ubicacion: "Norte", imagen: "RÃ­o PetrohuÃ© Norte2.jpg"},
+            {lat: -33.5487, lng: -70.5625, nombre: "RÃ­o Petrohue 5118", ubicacion: "Norte", imagen: "RÃ­o PetrohuÃ© Norte3.jpg"},
+            {lat: -33.5487, lng: -70.5625, nombre: "RÃ­o Petrohue 5288", ubicacion: "Norte", imagen: "RÃ­o PetrohuÃ© Norte4.jpg"},
+            {lat: -33.5487, lng: -70.5625, nombre: "RÃ­o Petrohue 5288", ubicacion: "Norte", imagen: "RÃ­o PetrohuÃ© Norte5.jpg"},
+            {lat: -33.5530, lng: -70.5628, nombre: "RÃ­o Petrohue 4814", ubicacion: "Sur", imagen: "RÃ­o PetrohuÃ© Sur.jpg"},
+            {lat: -33.5530, lng: -70.5628, nombre: "RÃ­o Petrohue 4864", ubicacion: "Sur", imagen: "RÃ­o PetrohuÃ© Sur2.jpg"},
+            {lat: -33.5530, lng: -70.5628, nombre: "RÃ­o Petrohue 4854", ubicacion: "Sur", imagen: "RÃ­o PetrohuÃ© Sur3.jpg"},
+            {lat: -33.55106957065507, lng: -70.56229966187793, nombre: "RÃ­o Petrohue 4834", ubicacion: "Sur", imagen: "RÃ­o PetrohuÃ© Sur4.jpg"},
+            {lat: -33.55106957065507, lng: -70.56229966187793, nombre: "RÃ­o Petrohue 4834", ubicacion: "Sur", imagen: "RÃ­o PetrohuÃ© Sur5.jpg"}
+        ];
+
+        const map = L.map("map", {
+            zoomControl: false,
+            scrollWheelZoom: true
+        });
+
+        const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+            attribution: "Tiles &copy; Esri"
+        }).addTo(map);
+
+        const streetsLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 20,
+            attribution: "&copy; OpenStreetMap contributors"
+        });
+
+        L.control.zoom({ position: "bottomright" }).addTo(map);
+        L.control.layers(
+            {
+                "Satelital": satelliteLayer,
+                "Callejero": streetsLayer
+            },
+            null,
+            { position: "topright", collapsed: true }
+        ).addTo(map);
+
+        map.fitBounds(initialBounds.pad(0.04));
+
+        Object.entries(zoneBounds).forEach(([zone, bounds]) => {
+            L.rectangle(bounds, {
+                color: zoneStyles[zone].color,
+                weight: 2,
+                fillColor: zoneStyles[zone].color,
+                fillOpacity: 0.08
+            })
+                .addTo(map)
+                .bindTooltip(zone, { permanent: true, direction: "center", className: "zone-label" });
+        });
+
+        const markerLayer = L.layerGroup().addTo(map);
+        const mapPanel = document.querySelector(".map-panel");
+        const searchInput = document.getElementById("searchInput");
+        const resultsList = document.getElementById("resultsList");
+        const resultsLabel = document.getElementById("resultsLabel");
+        const resetButton = document.getElementById("resetView");
+        const zoneButtons = Array.from(document.querySelectorAll(".zone-filter"));
+        let activeZone = "Todos";
+        let activeId = null;
+        let markerById = new Map();
+
+        function decodeMojibake(value) {
+            const bytes = Uint8Array.from(Array.from(value).map((char) => char.charCodeAt(0) & 255));
+            return new TextDecoder("utf-8").decode(bytes);
+        }
+
+        const mojibakeFixes = [
+            ["RÃƒÂ­o", "Río"],
+            ["RÃ­o", "Río"],
+            ["FrÃƒÂ­o", "Frío"],
+            ["FrÃ­o", "Frío"],
+            ["MaÃƒÂ±ihuales", "Mañihuales"],
+            ["MaÃ±ihuales", "Mañihuales"],
+            ["PetrohuÃƒÂ©", "Petrohué"],
+            ["PetrohuÃ©", "Petrohué"]
+        ];
+
+        function repairText(value) {
+            if (typeof value !== "string" || !/[ÃÂ]/.test(value)) {
+                return value;
+            }
+
+            let current = value;
+
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+                if (!/[ÃÂ]/.test(current)) {
+                    break;
+                }
+
+                try {
+                    const decoded = decodeMojibake(current);
+
+                    if (!decoded || decoded === current) {
+                        break;
+                    }
+
+                    current = decoded;
+                } catch (error) {
+                    break;
+                }
+            }
+
+            return mojibakeFixes.reduce((text, pair) => text.split(pair[0]).join(pair[1]), current);
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function normalizeText(value) {
+            return repairText(String(value || ""))
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+        }
+
+        const pasajes = rawPasajes.map((item, index) => ({
+            id: "registro-" + index,
+            lat: item.lat,
+            lng: item.lng,
+            nombre: repairText(item.nombre),
+            ubicacion: repairText(item.ubicacion),
+            imagen: repairText(item.imagen)
+        }));
+
+        const direcciones = Array.from(
+            pasajes.reduce((mapItems, item) => {
+                const key = [item.nombre, item.ubicacion, item.lat, item.lng].join("|");
+
+                if (!mapItems.has(key)) {
+                    mapItems.set(key, {
+                        id: key,
+                        lat: item.lat,
+                        lng: item.lng,
+                        nombre: item.nombre,
+                        ubicacion: item.ubicacion,
+                        imagenes: []
+                    });
+                }
+
+                const current = mapItems.get(key);
+
+                if (!current.imagenes.includes(item.imagen)) {
+                    current.imagenes.push(item.imagen);
+                }
+
+                return mapItems;
+            }, new Map()).values()
+        ).sort((a, b) => {
+            const zoneComparison = zoneOrder[a.ubicacion] - zoneOrder[b.ubicacion];
+            return zoneComparison || a.nombre.localeCompare(b.nombre, "es");
+        });
+
+        const overlapGroups = new Map();
+        direcciones.forEach((item) => {
+            const key = item.lat.toFixed(6) + "|" + item.lng.toFixed(6);
+            if (!overlapGroups.has(key)) {
+                overlapGroups.set(key, []);
+            }
+            overlapGroups.get(key).push(item);
+        });
+
+        overlapGroups.forEach((group) => {
+            if (group.length === 1) {
+                group[0].displayLat = group[0].lat;
+                group[0].displayLng = group[0].lng;
+                return;
+            }
+
+            const radius = 0.00012;
+
+            group.forEach((item, index) => {
+                const angle = (Math.PI * 2 * index) / group.length;
+                item.displayLat = item.lat + Math.sin(angle) * radius;
+                item.displayLng = item.lng + Math.cos(angle) * radius;
+            });
+        });
+
+        const countsByZone = direcciones.reduce((acc, item) => {
+            acc[item.ubicacion] += 1;
+            return acc;
+        }, { Norte: 0, Centro: 0, Sur: 0 });
+
+        document.getElementById("stat-direcciones").textContent = String(direcciones.length);
+        document.getElementById("stat-fotos").textContent = String(pasajes.length);
+        document.getElementById("stat-norte").textContent = String(countsByZone.Norte);
+        document.getElementById("stat-centro-sur").textContent = String(countsByZone.Centro + countsByZone.Sur);
+        document.getElementById("count-todos").textContent = String(direcciones.length);
+        document.getElementById("count-norte").textContent = String(countsByZone.Norte);
+        document.getElementById("count-centro").textContent = String(countsByZone.Centro);
+        document.getElementById("count-sur").textContent = String(countsByZone.Sur);
+
+        function buildPopup(item) {
+            const gallery = item.imagenes
+                .map((imageName) => {
+                    const src = encodeURI(imageName);
+                    return "<a href=\"" + src + "\" target=\"_blank\" rel=\"noopener noreferrer\"><img src=\"" + src + "\" loading=\"lazy\" alt=\"Imagen de " + escapeHtml(item.nombre) + "\"></a>";
+                })
+                .join("");
+
+            return [
+                "<article class=\"popup-card\">",
+                "<span class=\"zone-pill\" style=\"background:" + zoneStyles[item.ubicacion].color + ";\">" + escapeHtml(item.ubicacion) + "</span>",
+                "<h3>" + escapeHtml(item.nombre) + "</h3>",
+                "<p>" + item.imagenes.length + " foto(s) disponibles para esta direccion.</p>",
+                "<div class=\"popup-grid\">" + gallery + "</div>",
+                "<div class=\"popup-actions\">",
+                "<a class=\"popup-link\" href=\"https://www.google.com/maps?q=" + item.lat + "," + item.lng + "\" target=\"_blank\" rel=\"noopener noreferrer\">Abrir en Google Maps</a>",
+                "<a class=\"popup-link secondary\" href=\"" + encodeURI(item.imagenes[0]) + "\" target=\"_blank\" rel=\"noopener noreferrer\">Ver imagen principal</a>",
+                "</div>",
+                "</article>"
+            ].join("");
+        }
+
+        function getFilteredItems() {
+            const query = normalizeText(searchInput.value.trim());
+
+            return direcciones.filter((item) => {
+                const matchesZone = activeZone === "Todos" || item.ubicacion === activeZone;
+                const matchesSearch = !query || normalizeText(item.nombre + " " + item.ubicacion).includes(query);
+                return matchesZone && matchesSearch;
+            });
+        }
+
+        function renderList(items) {
+            if (!items.length) {
+                resultsList.innerHTML = "<div class=\"empty-state\">No encontramos resultados con ese filtro.<br>Prueba con otra calle o vuelve a <strong>Ver todo</strong>.</div>";
+                return;
+            }
+
+            resultsList.innerHTML = items.map((item) => {
+                const isActive = item.id === activeId ? " active" : "";
+                return [
+                    "<button type=\"button\" class=\"list-card" + isActive + "\" data-id=\"" + escapeHtml(item.id) + "\">",
+                    "<div class=\"list-card-head\">",
+                    "<div>",
+                    "<h3>" + escapeHtml(item.nombre) + "</h3>",
+                    "<p>Referencia satelital con acceso rapido a la galeria y al punto de mapa.</p>",
+                    "</div>",
+                    "<span class=\"zone-pill\" style=\"background:" + zoneStyles[item.ubicacion].color + ";\">" + escapeHtml(item.ubicacion) + "</span>",
+                    "</div>",
+                    "<div class=\"meta-row\">",
+                    "<span class=\"meta-chip\">" + item.imagenes.length + " foto(s)</span>",
+                    "<span class=\"meta-chip\">" + item.lat.toFixed(5) + ", " + item.lng.toFixed(5) + "</span>",
+                    "</div>",
+                    "</button>"
+                ].join("");
+            }).join("");
+        }
+
+        function renderMarkers(items) {
+            markerLayer.clearLayers();
+            markerById = new Map();
+
+            items.forEach((item) => {
+                const marker = L.circleMarker([item.displayLat, item.displayLng], {
+                    radius: 8,
+                    color: "#ffffff",
+                    weight: 2,
+                    fillColor: zoneStyles[item.ubicacion].color,
+                    fillOpacity: 0.94
+                })
+                    .addTo(markerLayer)
+                    .bindPopup(buildPopup(item));
+
+                marker.on("click", () => {
+                    activeId = item.id;
+                    renderList(items);
+                });
+
+                markerById.set(item.id, marker);
+            });
+        }
+
+        function updateResultsLabel(items) {
+            const visiblePhotos = items.reduce((sum, item) => sum + item.imagenes.length, 0);
+            resultsLabel.textContent = items.length + " direcciones visibles de " + direcciones.length + " | " + visiblePhotos + " foto(s) filtradas";
+        }
+
+        function focusOnItem(item, marker) {
+            if (!item || !marker) {
+                return;
+            }
+
+            activeId = item.id;
+            renderList(getFilteredItems());
+
+            if (mapPanel) {
+                mapPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+
+            window.setTimeout(() => {
+                map.invalidateSize();
+                map.once("moveend", () => {
+                    marker.openPopup();
+                });
+                map.flyTo([item.displayLat, item.displayLng], 17, { duration: 0.7 });
+            }, 180);
+        }
+
+        function render(options) {
+            const config = options || {};
+            const items = getFilteredItems();
+            renderMarkers(items);
+            renderList(items);
+            updateResultsLabel(items);
+
+            if (config.fitToZone && activeZone !== "Todos" && !searchInput.value.trim()) {
+                map.fitBounds(zoneBounds[activeZone].pad(0.08));
+            } else if (config.fitAll) {
+                map.fitBounds(initialBounds.pad(0.04));
+            } else if (config.fitFiltered && items.length) {
+                const groupBounds = L.latLngBounds(items.map((item) => [item.displayLat, item.displayLng]));
+                map.fitBounds(groupBounds.pad(0.2));
+            }
+        }
+
+        function setActiveZone(zone) {
+            activeZone = zone;
+            zoneButtons.forEach((button) => {
+                button.classList.toggle("active", button.dataset.zone === zone);
+            });
+        }
+
+        zoneButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                setActiveZone(button.dataset.zone);
+                activeId = null;
+                render({ fitToZone: activeZone !== "Todos", fitAll: activeZone === "Todos" });
+            });
+        });
+
+        searchInput.addEventListener("input", () => {
+            activeId = null;
+            render();
+        });
+
+        resultsList.addEventListener("click", (event) => {
+            const card = event.target.closest(".list-card");
+
+            if (!card) {
+                return;
+            }
+
+            activeId = card.dataset.id;
+            const marker = markerById.get(activeId);
+            const item = getFilteredItems().find((entry) => entry.id === activeId);
+
+            if (!marker || !item) {
+                return;
+            }
+
+            focusOnItem(item, marker);
+        });
+
+        resetButton.addEventListener("click", () => {
+            searchInput.value = "";
+            activeId = null;
+            setActiveZone("Todos");
+            render({ fitAll: true });
+        });
+
+        render({ fitAll: true });
+        window.setTimeout(() => map.invalidateSize(), 120);
+    </script>
+</body>
+</html>
