@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Villa El Alba | Mapa Satelital de Pasajes</title>
-    <meta name="description" content="Mapa satelital de los pasajes de Villa El Alba con filtros por zona, buscador de direcciones y galerias de imagenes por direccion.">
+    <title>Villa El Alba | Mapa de Pasajes</title>
+    <meta name="description" content="Mapa de pasajes de Villa El Alba con filtros por zona, buscador de direcciones y galerias de imagenes por direccion.">
     <meta name="theme-color" content="#14324a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -83,8 +83,7 @@
         .hero-stats,
         .controls,
         .map-panel,
-        .list-panel,
-        .footer-note {
+        .list-panel {
             padding: 24px;
         }
 
@@ -155,7 +154,7 @@
 
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
             gap: 12px;
         }
 
@@ -341,12 +340,6 @@
             background: #dfe7ea;
         }
 
-        .map-hint {
-            margin-top: 12px;
-            color: var(--muted);
-            font-size: 0.88rem;
-        }
-
         .reset-button {
             padding: 11px 16px;
             font-weight: 700;
@@ -363,7 +356,7 @@
             display: grid;
             flex: 1;
             min-height: 0;
-            gap: 12px;
+            gap: 10px;
             overflow: auto;
             padding-right: 4px;
         }
@@ -371,19 +364,20 @@
         .list-card {
             width: 100%;
             text-align: left;
-            padding: 16px;
+            padding: 14px 16px;
             border-radius: 20px;
             border: 1px solid rgba(23, 48, 66, 0.1);
             background: rgba(255, 255, 255, 0.72);
             color: inherit;
             cursor: pointer;
             font: inherit;
-            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
         }
 
         .list-card.active {
             border-color: rgba(23, 48, 66, 0.26);
             background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 14px 30px rgba(23, 48, 66, 0.08);
         }
 
         .list-card-head {
@@ -393,16 +387,19 @@
             align-items: flex-start;
         }
 
-        .list-card h3 {
+        .list-card-title {
+            display: block;
             font-size: 1rem;
             line-height: 1.3;
             letter-spacing: -0.02em;
+            font-weight: 800;
         }
 
-        .list-card p {
-            margin-top: 8px;
+        .list-card-subtitle {
+            display: block;
+            margin-top: 6px;
             color: var(--muted);
-            font-size: 0.92rem;
+            font-size: 0.84rem;
         }
 
         .zone-pill {
@@ -418,14 +415,14 @@
         .meta-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 12px;
+            gap: 8px;
+            margin-top: 10px;
             color: var(--muted);
             font-size: 0.82rem;
         }
 
         .meta-chip {
-            padding: 7px 10px;
+            padding: 6px 10px;
             border-radius: 999px;
             background: rgba(23, 48, 66, 0.06);
         }
@@ -437,13 +434,6 @@
             background: rgba(255, 255, 255, 0.46);
             color: var(--muted);
             text-align: center;
-            line-height: 1.6;
-        }
-
-        .footer-note {
-            margin-top: 18px;
-            color: var(--muted);
-            font-size: 0.92rem;
             line-height: 1.6;
         }
 
@@ -506,6 +496,7 @@
             overflow: hidden;
             border-radius: 14px;
             background: rgba(23, 48, 66, 0.08);
+            cursor: zoom-in;
         }
 
         .popup-grid img {
@@ -513,6 +504,11 @@
             height: 100%;
             object-fit: cover;
             display: block;
+            transition: transform 0.18s ease;
+        }
+
+        .popup-grid a:hover img {
+            transform: scale(1.04);
         }
 
         .popup-actions {
@@ -555,6 +551,133 @@
             box-shadow: none;
         }
 
+        .lightbox[hidden] {
+            display: none !important;
+        }
+
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: rgba(10, 20, 31, 0.76);
+            backdrop-filter: blur(10px);
+        }
+
+        .lightbox-shell {
+            width: min(920px, 100%);
+            max-height: calc(100vh - 48px);
+            padding: 18px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 252, 247, 0.96);
+            box-shadow: 0 28px 80px rgba(10, 20, 31, 0.32);
+        }
+
+        .lightbox-bar {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .lightbox-count {
+            margin-bottom: 10px;
+            color: #f9f6ef;
+            background: rgba(20, 50, 74, 0.9);
+            border-color: transparent;
+        }
+
+        .lightbox-title {
+            font-size: clamp(1.35rem, 2vw, 1.8rem);
+            letter-spacing: -0.04em;
+        }
+
+        .lightbox-stage {
+            position: relative;
+            margin-top: 16px;
+        }
+
+        .lightbox-frame {
+            margin: 0;
+            min-height: min(62vh, 680px);
+            padding: 18px 64px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, #102131 0%, #163246 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .lightbox-frame img {
+            max-width: 100%;
+            max-height: min(58vh, 620px);
+            display: block;
+            object-fit: contain;
+            border-radius: 16px;
+        }
+
+        .lightbox-caption {
+            margin-top: 14px;
+            color: var(--muted);
+        }
+
+        .lightbox-close,
+        .lightbox-nav {
+            border: 0;
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--ink);
+            cursor: pointer;
+            font: inherit;
+            font-weight: 800;
+            box-shadow: 0 12px 26px rgba(10, 20, 31, 0.16);
+            transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+        }
+
+        .lightbox-close:hover {
+            transform: translateY(-1px);
+        }
+
+        .lightbox-nav:hover {
+            transform: translateY(-50%) scale(1.03);
+        }
+
+        .lightbox-close {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 1.35rem;
+            line-height: 1;
+        }
+
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .lightbox-nav.prev {
+            left: 12px;
+        }
+
+        .lightbox-nav.next {
+            right: 12px;
+        }
+
+        .lightbox-nav[disabled] {
+            opacity: 0.42;
+            cursor: default;
+            transform: translateY(-50%);
+        }
+
         @media (max-width: 1120px) {
             .hero,
             .controls,
@@ -584,8 +707,7 @@
             .hero-stats,
             .controls,
             .map-panel,
-            .list-panel,
-            .footer-note {
+            .list-panel {
                 padding: 18px;
             }
 
@@ -600,6 +722,27 @@
             .stat-grid {
                 grid-template-columns: 1fr 1fr;
             }
+
+            .lightbox {
+                padding: 12px;
+            }
+
+            .lightbox-shell {
+                padding: 14px;
+            }
+
+            .lightbox-frame {
+                min-height: 46vh;
+                padding: 14px 52px;
+            }
+
+            .lightbox-nav.prev {
+                left: 8px;
+            }
+
+            .lightbox-nav.next {
+                right: 8px;
+            }
         }
     </style>
 </head>
@@ -607,7 +750,7 @@
     <div class="page-shell">
         <header class="hero">
             <section class="hero-copy panel">
-                <span class="eyebrow">Mapa Satelital</span>
+                <span class="eyebrow">Villa El Alba</span>
                 <h1>Pasajes Villa El Alba</h1>
             </section>
 
@@ -624,11 +767,15 @@
                     </article>
                     <article class="stat-card">
                         <strong id="stat-norte">0</strong>
-                        <span>Sector norte</span>
+                        <span>Norte</span>
                     </article>
                     <article class="stat-card">
-                        <strong id="stat-centro-sur">0</strong>
-                        <span>Centro y sur</span>
+                        <strong id="stat-centro">0</strong>
+                        <span>Centro</span>
+                    </article>
+                    <article class="stat-card">
+                        <strong id="stat-sur">0</strong>
+                        <span>Sur</span>
                     </article>
                 </div>
             </aside>
@@ -665,7 +812,6 @@
                     </div>
                 </div>
                 <div id="map"></div>
-                <p class="map-hint">Los puntos superpuestos se separan visualmente unos metros para facilitar el clic, pero el enlace de mapas conserva la coordenada original.</p>
             </section>
 
             <aside class="list-panel panel">
@@ -680,9 +826,26 @@
             </aside>
         </main>
 
-        <footer class="footer-note panel">
-            Base satelital con alternativa callejero, listado lateral y filtros preparados para publicacion estatica. El siguiente paso natural es optimizar el peso de las imagenes antes de subir el sitio.
-        </footer>
+    </div>
+
+    <div class="lightbox" id="lightbox" hidden>
+        <div class="lightbox-shell" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
+            <div class="lightbox-bar">
+                <div>
+                    <span class="eyebrow lightbox-count" id="lightboxCount">Foto 1 de 1</span>
+                    <h2 class="lightbox-title" id="lightboxTitle">Galería</h2>
+                </div>
+                <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Cerrar galería">×</button>
+            </div>
+            <div class="lightbox-stage">
+                <button type="button" class="lightbox-nav prev" id="lightboxPrev" aria-label="Imagen anterior">‹</button>
+                <figure class="lightbox-frame">
+                    <img id="lightboxImage" alt="">
+                </figure>
+                <button type="button" class="lightbox-nav next" id="lightboxNext" aria-label="Siguiente imagen">›</button>
+            </div>
+            <p class="lightbox-caption" id="lightboxCaption"></p>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -858,9 +1021,18 @@
         const resultsLabel = document.getElementById("resultsLabel");
         const resetButton = document.getElementById("resetView");
         const zoneButtons = Array.from(document.querySelectorAll(".zone-filter"));
+        const lightbox = document.getElementById("lightbox");
+        const lightboxImage = document.getElementById("lightboxImage");
+        const lightboxTitle = document.getElementById("lightboxTitle");
+        const lightboxCount = document.getElementById("lightboxCount");
+        const lightboxCaption = document.getElementById("lightboxCaption");
+        const lightboxClose = document.getElementById("lightboxClose");
+        const lightboxPrev = document.getElementById("lightboxPrev");
+        const lightboxNext = document.getElementById("lightboxNext");
         let activeZone = "Todos";
         let activeId = null;
         let markerById = new Map();
+        const lightboxState = { itemId: null, index: 0 };
 
         function decodeMojibake(value) {
             const bytes = Uint8Array.from(Array.from(value).map((char) => char.charCodeAt(0) & 255));
@@ -958,6 +1130,7 @@
             const zoneComparison = zoneOrder[a.ubicacion] - zoneOrder[b.ubicacion];
             return zoneComparison || a.nombre.localeCompare(b.nombre, "es");
         });
+        const directionById = new Map(direcciones.map((item) => [item.id, item]));
 
         const overlapGroups = new Map();
         direcciones.forEach((item) => {
@@ -992,17 +1165,72 @@
         document.getElementById("stat-direcciones").textContent = String(direcciones.length);
         document.getElementById("stat-fotos").textContent = String(pasajes.length);
         document.getElementById("stat-norte").textContent = String(countsByZone.Norte);
-        document.getElementById("stat-centro-sur").textContent = String(countsByZone.Centro + countsByZone.Sur);
+        document.getElementById("stat-centro").textContent = String(countsByZone.Centro);
+        document.getElementById("stat-sur").textContent = String(countsByZone.Sur);
         document.getElementById("count-todos").textContent = String(direcciones.length);
         document.getElementById("count-norte").textContent = String(countsByZone.Norte);
         document.getElementById("count-centro").textContent = String(countsByZone.Centro);
         document.getElementById("count-sur").textContent = String(countsByZone.Sur);
+        function buildImageSrc(imageName) {
+            return encodeURI(imageName);
+        }
+
+        function renderLightbox() {
+            const item = directionById.get(lightboxState.itemId);
+
+            if (!item || !item.imagenes.length) {
+                return;
+            }
+
+            const total = item.imagenes.length;
+            const safeIndex = Math.max(0, Math.min(lightboxState.index, total - 1));
+            const src = buildImageSrc(item.imagenes[safeIndex]);
+
+            lightboxState.index = safeIndex;
+            lightboxImage.src = src;
+            lightboxImage.alt = "Imagen " + (safeIndex + 1) + " de " + item.nombre;
+            lightboxTitle.textContent = item.nombre;
+            lightboxCount.textContent = "Foto " + (safeIndex + 1) + " de " + total;
+            lightboxCaption.textContent = item.ubicacion + " • " + total + " foto(s) disponibles para esta dirección.";
+            lightboxPrev.disabled = total < 2;
+            lightboxNext.disabled = total < 2;
+        }
+
+        function openLightbox(itemId, startIndex) {
+            const item = directionById.get(itemId);
+
+            if (!item || !item.imagenes.length) {
+                return;
+            }
+
+            lightboxState.itemId = item.id;
+            lightboxState.index = Number.isFinite(startIndex) ? startIndex : 0;
+            renderLightbox();
+            lightbox.hidden = false;
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeLightbox() {
+            lightbox.hidden = true;
+            document.body.style.overflow = "";
+        }
+
+        function stepLightbox(delta) {
+            const item = directionById.get(lightboxState.itemId);
+
+            if (!item || item.imagenes.length < 2) {
+                return;
+            }
+
+            lightboxState.index = (lightboxState.index + delta + item.imagenes.length) % item.imagenes.length;
+            renderLightbox();
+        }
 
         function buildPopup(item) {
             const gallery = item.imagenes
-                .map((imageName) => {
-                    const src = encodeURI(imageName);
-                    return "<a href=\"" + src + "\" target=\"_blank\" rel=\"noopener noreferrer\"><img src=\"" + src + "\" loading=\"lazy\" alt=\"Imagen de " + escapeHtml(item.nombre) + "\"></a>";
+                .map((imageName, index) => {
+                    const src = buildImageSrc(imageName);
+                    return "<a href=\"" + src + "\" data-lightbox-item=\"" + escapeHtml(item.id) + "\" data-lightbox-index=\"" + index + "\"><img src=\"" + src + "\" loading=\"lazy\" alt=\"Imagen de " + escapeHtml(item.nombre) + "\"></a>";
                 })
                 .join("");
 
@@ -1014,7 +1242,7 @@
                 "<div class=\"popup-grid\">" + gallery + "</div>",
                 "<div class=\"popup-actions\">",
                 "<a class=\"popup-link\" href=\"https://www.google.com/maps?q=" + item.lat + "," + item.lng + "\" target=\"_blank\" rel=\"noopener noreferrer\">Abrir en Google Maps</a>",
-                "<a class=\"popup-link secondary\" href=\"" + encodeURI(item.imagenes[0]) + "\" target=\"_blank\" rel=\"noopener noreferrer\">Ver imagen principal</a>",
+                "<a class=\"popup-link secondary\" href=\"" + buildImageSrc(item.imagenes[0]) + "\" data-lightbox-item=\"" + escapeHtml(item.id) + "\" data-lightbox-index=\"0\">Ver galería</a>",
                 "</div>",
                 "</article>"
             ].join("");
@@ -1040,17 +1268,16 @@
                 const isActive = item.id === activeId ? " active" : "";
                 return [
                     "<button type=\"button\" class=\"list-card" + isActive + "\" data-id=\"" + escapeHtml(item.id) + "\">",
-                    "<div class=\"list-card-head\">",
-                    "<div>",
-                    "<h3>" + escapeHtml(item.nombre) + "</h3>",
-                    "<p>Referencia satelital con acceso rapido a la galeria y al punto de mapa.</p>",
-                    "</div>",
+                    "<span class=\"list-card-head\">",
+                    "<span>",
+                    "<span class=\"list-card-title\">" + escapeHtml(item.nombre) + "</span>",
+                    "<span class=\"list-card-subtitle\">Ver fotos y ubicar en el mapa</span>",
+                    "</span>",
                     "<span class=\"zone-pill\" style=\"background:" + zoneStyles[item.ubicacion].color + ";\">" + escapeHtml(item.ubicacion) + "</span>",
-                    "</div>",
-                    "<div class=\"meta-row\">",
+                    "</span>",
+                    "<span class=\"meta-row\">",
                     "<span class=\"meta-chip\">" + item.imagenes.length + " foto(s)</span>",
-                    "<span class=\"meta-chip\">" + item.lat.toFixed(5) + ", " + item.lng.toFixed(5) + "</span>",
-                    "</div>",
+                    "</span>",
                     "</button>"
                 ].join("");
             }).join("");
@@ -1143,6 +1370,21 @@
             render();
         });
 
+        document.addEventListener("click", (event) => {
+            const lightboxTrigger = event.target.closest("[data-lightbox-item]");
+
+            if (lightboxTrigger) {
+                event.preventDefault();
+                event.stopPropagation();
+                openLightbox(lightboxTrigger.dataset.lightboxItem, Number(lightboxTrigger.dataset.lightboxIndex || "0"));
+                return;
+            }
+
+            if (event.target === lightbox) {
+                closeLightbox();
+            }
+        });
+
         resultsList.addEventListener("click", (event) => {
             const card = event.target.closest(".list-card");
 
@@ -1166,6 +1408,24 @@
             activeId = null;
             setActiveZone("Todos");
             render({ fitAll: true });
+        });
+
+        lightboxClose.addEventListener("click", closeLightbox);
+        lightboxPrev.addEventListener("click", () => stepLightbox(-1));
+        lightboxNext.addEventListener("click", () => stepLightbox(1));
+
+        document.addEventListener("keydown", (event) => {
+            if (lightbox.hidden) {
+                return;
+            }
+
+            if (event.key === "Escape") {
+                closeLightbox();
+            } else if (event.key === "ArrowLeft") {
+                stepLightbox(-1);
+            } else if (event.key === "ArrowRight") {
+                stepLightbox(1);
+            }
         });
 
         render({ fitAll: true });
